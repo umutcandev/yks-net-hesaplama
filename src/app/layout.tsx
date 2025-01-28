@@ -42,9 +42,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" className="dark" suppressHydrationWarning>
-      <head>
-        <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
-      </head>
       <body className={`${GeistSans.className} min-h-screen bg-background text-foreground antialiased`}>
         {children}
       </body>
