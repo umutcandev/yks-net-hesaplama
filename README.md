@@ -13,6 +13,8 @@ YKS (Yükseköğretim Kurumları Sınavı) için TYT ve AYT net hesaplama aracı
 - Fen Bilimleri (20 soru)
 - Otomatik net ve yüzdelik hesaplama
 - Toplam 120 soru
+- Sonuçları PNG olarak kaydetme
+- Sonuç görselinde tarih ve saat bilgisi
 
 ### AYT (Alan Yeterlilik Testi)
 
@@ -40,6 +42,9 @@ YKS (Yükseköğretim Kurumları Sınavı) için TYT ve AYT net hesaplama aracı
 - Otomatik soru sayısı kontrolü
 - Yüzdelik dilim hesaplama
 - Modern ve kullanıcı dostu arayüz
+- Sonuçları özelleştirilebilir isimle PNG olarak kaydetme
+- Sonuç görsellerinde tarih, saat ve kaynak bilgisi
+- Mobilde otomatik sonuç görüntüleme
 
 ## Kullanılan Teknolojiler
 
@@ -75,4 +80,3 @@ Proje Vercel üzerinde barındırılmaktadır. Main branch'e yapılan her push o
 ## Lisans
 
 Bu proje MIT lisansı altında lisanslanmıştır. Daha fazla bilgi için `LICENSE` dosyasına bakınız.
->>>>>>> 877e119930d36c81ad300ae1e47a3437e18664a7

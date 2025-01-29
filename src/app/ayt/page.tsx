@@ -3,8 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Download } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 
 interface SubjectScores {
   correct: number;
@@ -76,6 +77,7 @@ export default function AYT() {
 
   const [results, setResults] = useState<AYTResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [resultName, setResultName] = useState<string>("");
 
   const handleInputChange = (
     subject: keyof AYTScores,
@@ -206,33 +208,226 @@ export default function AYT() {
           },
         };
 
-        // Sayısal puan hesaplama (Matematik + Fen Bilimleri)
-        const sayisalNet = results.math.net + results.physics.net + results.chemistry.net + results.biology.net;
-        results.sayisal.total = sayisalNet;
-        results.sayisal.percentage = (sayisalNet / 80) * 100;
+        // Sayısal puanı hesapla
+        results.sayisal.total = results.math.net + results.physics.net + results.chemistry.net + results.biology.net;
+        results.sayisal.percentage = (results.sayisal.total / 80) * 100;
 
-        // Sözel puan hesaplama (TDE/SOS1 + Sosyal-2)
-        const sozelNet = results.tdeSos1.net + results.socialSciences2.net;
-        results.sozel.total = sozelNet;
-        results.sozel.percentage = (sozelNet / 80) * 100;
+        // Sözel puanı hesapla
+        results.sozel.total = results.tdeSos1.net + results.socialSciences2.net;
+        results.sozel.percentage = (results.sozel.total / 80) * 100;
 
-        // Eşit Ağırlık puan hesaplama (Matematik + TDE/SOS1)
-        const esitagirlikNet = results.math.net + results.tdeSos1.net;
-        results.esitagirlik.total = esitagirlikNet;
-        results.esitagirlik.percentage = (esitagirlikNet / 80) * 100;
+        // Eşit ağırlık puanı hesapla
+        results.esitagirlik.total = results.math.net + results.tdeSos1.net;
+        results.esitagirlik.percentage = (results.esitagirlik.total / 80) * 100;
 
-        // Dil puanı hesaplama (Yabancı Dil)
-        const dilNet = results.foreignLanguage.net;
-        results.dil.total = dilNet;
-        results.dil.percentage = (dilNet / 80) * 100;
-        
+        // Dil puanı hesapla
+        results.dil.total = results.foreignLanguage.net;
+        results.dil.percentage = (results.dil.total / 80) * 100;
+
         setResults(results);
         setIsCalculating(false);
-      }, 1000);
+
+        // Mobilde sonuçlara otomatik kaydırma
+        if (window.innerWidth < 768) {
+          setTimeout(() => {
+            const resultsElement = document.querySelector('.border-l-\\[3px\\]');
+            if (resultsElement) {
+              resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 100);
+        }
+      }, 200);
     } catch (error) {
       console.error('Error calculating net:', error);
       setIsCalculating(false);
     }
+  };
+
+  const downloadResults = () => {
+    if (!results) return;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Canvas boyutlarını artır
+    canvas.width = 800;
+    canvas.height = 1200;
+
+    // Arka plan
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Başlık
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 36px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(resultName || "AYT Sonuçları", canvas.width / 2, 60);
+
+    // Tarih ve Saat
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("tr-TR", { 
+      day: "numeric", 
+      month: "long", 
+      year: "numeric"
+    });
+    const timeStr = now.toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    ctx.font = "24px system-ui";
+    ctx.fillStyle = "#808080";
+    ctx.textAlign = "center";
+    ctx.fillText(`${dateStr} - ${timeStr}`, canvas.width / 2, 100);
+
+    // Yatay çizgi çizme fonksiyonu
+    const drawHorizontalLine = (y: number) => {
+      ctx.beginPath();
+      ctx.strokeStyle = "#333333";
+      ctx.lineWidth = 2;
+      ctx.moveTo(50, y);
+      ctx.lineTo(canvas.width - 50, y);
+      ctx.stroke();
+    };
+
+    // Sonuçlar
+    ctx.font = "24px system-ui";
+    ctx.textAlign = "left";
+    let startY = 160;
+    const lineHeight = 35;
+    let currentY = startY;
+
+    // Sayısal sonuçlar
+    if (results.math.correct > 0 || results.math.incorrect > 0 ||
+        results.physics.correct > 0 || results.physics.incorrect > 0 ||
+        results.chemistry.correct > 0 || results.chemistry.incorrect > 0 ||
+        results.biology.correct > 0 || results.biology.incorrect > 0) {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 32px system-ui";
+      ctx.fillText("Sayısal", 50, currentY);
+      currentY += lineHeight;
+
+      ctx.font = "24px system-ui";
+      if (results.math.correct > 0 || results.math.incorrect > 0) {
+        ctx.fillText(`Matematik: ${results.math.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+      if (results.physics.correct > 0 || results.physics.incorrect > 0) {
+        ctx.fillText(`Fizik: ${results.physics.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+      if (results.chemistry.correct > 0 || results.chemistry.incorrect > 0) {
+        ctx.fillText(`Kimya: ${results.chemistry.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+      if (results.biology.correct > 0 || results.biology.incorrect > 0) {
+        ctx.fillText(`Biyoloji: ${results.biology.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+
+      ctx.fillStyle = "#00FF00";
+      ctx.font = "bold 26px system-ui";
+      ctx.fillText(`Sayısal Toplam: ${results.sayisal.total.toFixed(2)} net / 80 soru`, 50, currentY + lineHeight);
+      ctx.fillText(`Başarı Yüzdesi: %${results.sayisal.percentage.toFixed(1)}`, 50, currentY + lineHeight * 2);
+      currentY += lineHeight * 3;
+
+      // Bölüm sonu çizgisi
+      drawHorizontalLine(currentY);
+      currentY += lineHeight;
+    }
+
+    // Eşit Ağırlık sonuçları
+    if (results.math.correct > 0 || results.math.incorrect > 0 ||
+        results.tdeSos1.correct > 0 || results.tdeSos1.incorrect > 0) {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 32px system-ui";
+      ctx.fillText("Eşit Ağırlık", 50, currentY);
+      currentY += lineHeight;
+
+      ctx.font = "24px system-ui";
+      if (results.math.correct > 0 || results.math.incorrect > 0) {
+        ctx.fillText(`Matematik: ${results.math.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+      if (results.tdeSos1.correct > 0 || results.tdeSos1.incorrect > 0) {
+        ctx.fillText(`TDE/Sosyal-1: ${results.tdeSos1.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+
+      ctx.fillStyle = "#00FF00";
+      ctx.font = "bold 26px system-ui";
+      ctx.fillText(`EA Toplam: ${results.esitagirlik.total.toFixed(2)} net / 80 soru`, 50, currentY + lineHeight);
+      ctx.fillText(`Başarı Yüzdesi: %${results.esitagirlik.percentage.toFixed(1)}`, 50, currentY + lineHeight * 2);
+      currentY += lineHeight * 3;
+
+      // Bölüm sonu çizgisi
+      drawHorizontalLine(currentY);
+      currentY += lineHeight;
+    }
+
+    // Sözel sonuçları
+    if (results.tdeSos1.correct > 0 || results.tdeSos1.incorrect > 0 ||
+        results.socialSciences2.correct > 0 || results.socialSciences2.incorrect > 0) {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 32px system-ui";
+      ctx.fillText("Sözel", 50, currentY);
+      currentY += lineHeight;
+
+      ctx.font = "24px system-ui";
+      if (results.tdeSos1.correct > 0 || results.tdeSos1.incorrect > 0) {
+        ctx.fillText(`TDE/Sosyal-1: ${results.tdeSos1.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+      if (results.socialSciences2.correct > 0 || results.socialSciences2.incorrect > 0) {
+        ctx.fillText(`Sosyal-2: ${results.socialSciences2.net.toFixed(2)} net`, 50, currentY);
+        currentY += lineHeight;
+      }
+
+      ctx.fillStyle = "#00FF00";
+      ctx.font = "bold 26px system-ui";
+      ctx.fillText(`Sözel Toplam: ${results.sozel.total.toFixed(2)} net / 80 soru`, 50, currentY + lineHeight);
+      ctx.fillText(`Başarı Yüzdesi: %${results.sozel.percentage.toFixed(1)}`, 50, currentY + lineHeight * 2);
+      currentY += lineHeight * 3;
+
+      // Bölüm sonu çizgisi
+      drawHorizontalLine(currentY);
+      currentY += lineHeight;
+    }
+
+    // Dil sonuçları
+    if (results.foreignLanguage.correct > 0 || results.foreignLanguage.incorrect > 0) {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 32px system-ui";
+      ctx.fillText("Yabancı Dil", 50, currentY);
+      currentY += lineHeight;
+
+      ctx.font = "24px system-ui";
+      ctx.fillText(`Yabancı Dil: ${results.foreignLanguage.net.toFixed(2)} net`, 50, currentY);
+      currentY += lineHeight * 2;
+
+      ctx.fillStyle = "#00FF00";
+      ctx.font = "bold 26px system-ui";
+      ctx.fillText(`Dil Toplam: ${results.dil.total.toFixed(2)} net / 80 soru`, 50, currentY);
+      currentY += lineHeight;
+      ctx.fillText(`Başarı Yüzdesi: %${results.dil.percentage.toFixed(1)}`, 50, currentY);
+      currentY += lineHeight * 2;
+
+      // Bölüm sonu çizgisi
+      drawHorizontalLine(currentY);
+    }
+
+    // Watermark
+    ctx.fillStyle = "#404040";
+    ctx.font = "20px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("net-hesaplama.vercel.app | github.com/umutcandev", canvas.width / 2, canvas.height - 30);
+
+    // Canvas'ı PNG olarak indir
+    const link = document.createElement("a");
+    link.download = `${resultName || "ayt-sonuc"}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
   };
 
   return (
@@ -633,6 +828,43 @@ export default function AYT() {
           {results && (
             <div className="border-l-[3px] border-[#00FF00]/20 pl-6 py-4 bg-[#00FF00]/[0.03]">
               <div className="space-y-6">
+                <div className="flex items-center justify-between mb-4 pr-4">
+                  <h3 className="text-lg font-semibold text-primary">Sonuçlar</h3>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Sonuçları Kaydet
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="fixed top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%] w-[calc(100%-2rem)] sm:w-[28rem] rounded-lg md:rounded-xl">
+                      <DialogHeader>
+                        <DialogTitle>Sonuçları Kaydet</DialogTitle>
+                        <DialogDescription className="mt-2">
+                          Sonuçlarınızı daha sonra hangi denemede yaptığınızı hatırlamak için bir isim verebilirsiniz. Örneğin: "Özdebir Mart AYT" veya "345 AYT"
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Input
+                          placeholder="Sınav ismi (isteğe bağlı)"
+                          value={resultName}
+                          onChange={(e) => setResultName(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={downloadResults}>
+                          <Download className="w-4 h-4 mr-2" />
+                          İndir
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 {/* Sayısal Sonuçlar */}
                 {(results.math.correct > 0 || results.math.incorrect > 0 ||
                   results.physics.correct > 0 || results.physics.incorrect > 0 ||

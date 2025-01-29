@@ -3,8 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Download } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 
 interface SubjectScores {
   correct: number;
@@ -50,6 +51,7 @@ export default function Home() {
 
   const [results, setResults] = useState<TYTResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [resultName, setResultName] = useState<string>("");
 
   const handleInputChange = (
     subject: keyof TYTScores,
@@ -153,11 +155,111 @@ export default function Home() {
         
         setResults(results);
         setIsCalculating(false);
-      }, 1000);
+
+        // Mobilde sonuçlara otomatik kaydırma
+        if (window.innerWidth < 768) {
+          setTimeout(() => {
+            const resultsElement = document.querySelector('.border-l-\\[3px\\]');
+            if (resultsElement) {
+              resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 100);
+        }
+      }, 200);
     } catch (error) {
       console.error('Error calculating net:', error);
       setIsCalculating(false);
     }
+  };
+
+  const downloadResults = () => {
+    if (!results) return;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Canvas boyutlarını ayarla
+    canvas.width = 800;
+    canvas.height = 600;
+
+    // Arka plan
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Başlık
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 36px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(resultName || "TYT Sonuçları", canvas.width / 2, 60);
+
+    // Tarih ve Saat
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("tr-TR", { 
+      day: "numeric", 
+      month: "long", 
+      year: "numeric"
+    });
+    const timeStr = now.toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    ctx.font = "24px system-ui";
+    ctx.fillStyle = "#808080";
+    ctx.textAlign = "center";
+    ctx.fillText(`${dateStr} - ${timeStr}`, canvas.width / 2, 100);
+
+    // Yatay çizgi çizme fonksiyonu
+    const drawHorizontalLine = (y: number) => {
+      ctx.beginPath();
+      ctx.strokeStyle = "#333333";
+      ctx.lineWidth = 2;
+      ctx.moveTo(50, y);
+      ctx.lineTo(canvas.width - 50, y);
+      ctx.stroke();
+    };
+
+    // Sonuçlar
+    ctx.font = "24px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#FFFFFF";
+    const startY = 160;
+    const lineHeight = 35;
+    let currentY = startY;
+
+    // Ders sonuçları
+    ctx.fillText(`Türkçe: ${results.turkish.net.toFixed(2)} net`, 50, currentY);
+    currentY += lineHeight;
+    ctx.fillText(`Sosyal Bilimler: ${results.social.net.toFixed(2)} net`, 50, currentY);
+    currentY += lineHeight;
+    ctx.fillText(`Temel Matematik: ${results.math.net.toFixed(2)} net`, 50, currentY);
+    currentY += lineHeight;
+    ctx.fillText(`Fen Bilimleri: ${results.science.net.toFixed(2)} net`, 50, currentY);
+    currentY += lineHeight * 2;
+
+    // Bölüm sonu çizgisi
+    drawHorizontalLine(currentY - lineHeight);
+    currentY += lineHeight;
+
+    // Toplam sonuç
+    ctx.fillStyle = "#00FF00";
+    ctx.font = "bold 26px system-ui";
+    ctx.fillText(`Toplam: ${results.total.toFixed(2)} net / 120 soru`, 50, currentY);
+    currentY += lineHeight;
+    ctx.fillText(`Başarı Yüzdesi: %${results.percentage.toFixed(1)}`, 50, currentY);
+
+    // Watermark
+    ctx.fillStyle = "#404040";
+    ctx.font = "20px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("net-hesaplama.vercel.app | github.com/umutcandev", canvas.width / 2, canvas.height - 30);
+
+    // Canvas'ı PNG olarak indir
+    const link = document.createElement("a");
+    link.download = `${resultName || "tyt-sonuc"}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
   };
 
   return (
@@ -355,6 +457,43 @@ export default function Home() {
           {results && (
             <div className="border-l-[3px] border-[#00FF00]/20 pl-6 py-4 bg-[#00FF00]/[0.03]">
               <div className="space-y-2 px-1">
+                <div className="flex items-center justify-between mb-4 pr-4">
+                  <h3 className="text-lg font-semibold text-primary">Sonuçlar</h3>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Sonuçları Kaydet
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="fixed top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%] w-[calc(100%-2rem)] sm:w-[28rem] rounded-lg md:rounded-xl">
+                      <DialogHeader>
+                        <DialogTitle>Sonuçları Kaydet</DialogTitle>
+                        <DialogDescription className="mt-2">
+                          Sonuçlarınızı daha sonra hangi denemede yaptığınızı hatırlamak için bir isim verebilirsiniz. Örneğin: "Özdebir Mart TYT" veya "345 TYT"
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Input
+                          placeholder="Sınav ismi (isteğe bağlı)"
+                          value={resultName}
+                          onChange={(e) => setResultName(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={downloadResults}>
+                          <Download className="w-4 h-4 mr-2" />
+                          İndir
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <p className="text-base">TYT Türkçe: <span className="font-bold">{results.turkish.net.toFixed(2)} net</span></p>
                 <p className="text-base">TYT Sosyal Bilimler: <span className="font-bold">{results.social.net.toFixed(2)} net</span></p>
                 <p className="text-base">TYT Temel Matematik: <span className="font-bold">{results.math.net.toFixed(2)} net</span></p>
